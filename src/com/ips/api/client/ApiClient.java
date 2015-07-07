@@ -14,8 +14,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.security.PrivateKey;
 import java.security.cert.X509Certificate;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 /**
  * IPS Api client. used to send receive and modify IPS messages
@@ -37,10 +36,11 @@ public class ApiClient {
 
     /**
      * Creates instance of IpsClient
-     * @param apiAddress Api root address
+     *
+     * @param apiAddress    Api root address
      * @param participantId Participant identifier (BIC)
-     * @param privateKey Participant private key
-     * @param certificate Participant X509 certificate
+     * @param privateKey    Participant private key
+     * @param certificate   Participant X509 certificate
      */
     public ApiClient(String apiAddress,
                      String participantId,
@@ -54,14 +54,15 @@ public class ApiClient {
 
     /**
      * Sends IPS message
+     *
      * @param receiverCert Receivers X509 certificate
-     * @param receiver Receiver identifier (BIC)
-     * @param ref Message reference, used to identify message
-     * @param type Message type
-     * @param date Date
-     * @param content Plant content
-     * @param amount Message amount
-     * @param ccy Currency
+     * @param receiver     Receiver identifier (BIC)
+     * @param ref          Message reference, used to identify message
+     * @param type         Message type
+     * @param date         Date
+     * @param content      Plant content
+     * @param amount       Message amount
+     * @param ccy          Currency
      * @throws Exception
      */
     public void send(X509Certificate receiverCert,
@@ -88,7 +89,8 @@ public class ApiClient {
 
     /**
      * Cancels sent message if it is not processed yet.
-     * @param ref Message reference
+     *
+     * @param ref    Message reference
      * @param reason The reason of cancellation
      * @throws Exception
      */
@@ -98,6 +100,7 @@ public class ApiClient {
 
     /**
      * Fetches outbox (sent messages)
+     *
      * @param uri Outbox uri, optional parameter, returns all items from outbox if uri is null
      *            if uri specified, subset of outbox items will be returned which are modified after specified time.
      * @return The list of outbox items
@@ -109,6 +112,7 @@ public class ApiClient {
 
     /**
      * Fetches inbox (received messages)
+     *
      * @param all Optional parameter, returns all inbox items if parameter is true, otherwise only new
      *            (not completed, not rejected) items will be returned
      * @return The list of inbox items
@@ -120,6 +124,7 @@ public class ApiClient {
 
     /**
      * Completes (accepts) message
+     *
      * @param messageId Message identifier
      * @throws Exception
      */
@@ -129,8 +134,9 @@ public class ApiClient {
 
     /**
      * Rejects message
+     *
      * @param messageId message identifier
-     * @param reason The reason of rejection
+     * @param reason    The reason of rejection
      * @throws Exception
      */
     public void rejectMessage(int messageId, String reason) throws Exception {
@@ -194,15 +200,75 @@ public class ApiClient {
     }
 
     private HttpRequest signRequest(HttpRequest request) throws Exception {
+        request.getHeaders()
+                .setAuthorization(new StringBuilder("IPSAuth ")
+                        .append(this.participantId)
+                        .append(":")
+                        .append(Base64.encodeBase64String(
+                                CryptoUtils.signCms(
+                                        canonicalizeRequest(request).getBytes("UTF8"),
+                                        this.privateKey,
+                                        this.certificate)))
+                        .toString());
+        return request;
+    }
+
+    private static String canonicalizeRequest(HttpRequest request) throws IOException {
         String method = (String) request.getHeaders().get("X-HTTP-Method-Override");
 
         if (method == null) {
             method = request.getRequestMethod();
         }
 
-        StringBuilder canonicalizedRequest = new StringBuilder(method)
+        StringBuilder canonicalizedRequest = new StringBuilder(method);
+
+        List<String> ipsHeaderNames = new ArrayList<String>(request.getHeaders().size());
+
+        for (String headerName : request.getHeaders().keySet()) {
+            if (headerName.toLowerCase().startsWith("x-ips-")) {
+                ipsHeaderNames.add(headerName);
+            }
+        }
+
+        Collections.sort(ipsHeaderNames);
+
+        for (String headerName : ipsHeaderNames) {
+            List<String> values = request.getHeaders().getHeaderStringValues(headerName);
+
+            if (!values.isEmpty()) {
+                canonicalizedRequest
+                        .append('\n')
+                        .append(headerName.toLowerCase())
+                        .append(':');
+
+                boolean separate = false;
+
+                for (String value : values) {
+                    if (separate) {
+                        canonicalizedRequest.append(',');
+                    } else {
+                        separate = true;
+                    }
+
+                    canonicalizedRequest.append(value);
+                }
+            }
+        }
+
+        canonicalizedRequest
                 .append('\n')
                 .append(request.getUrl().getRawPath());
+
+        List<String> queryParamNames = new ArrayList<String>(request.getUrl().size());
+        Collections.sort(queryParamNames);
+
+        for (String paramName : queryParamNames) {
+            canonicalizedRequest
+                    .append('\n')
+                    .append(paramName)
+                    .append(':')
+                    .append(request.getUrl().get(paramName));
+        }
 
         ByteArrayOutputStream output = new ByteArrayOutputStream();
 
@@ -217,18 +283,7 @@ public class ApiClient {
             output.close();
         }
 
-        String signature = Base64.encodeBase64String(CryptoUtils.signCms(canonicalizedRequest
-                .toString()
-                .getBytes("UTF8"), this.privateKey, this.certificate));
-
-
-        request.getHeaders()
-                .setAuthorization(new StringBuilder("IPSAuth ")
-                        .append(this.participantId)
-                        .append(":")
-                        .append(signature)
-                        .toString());
-
-        return request;
+        return canonicalizedRequest.toString();
     }
+
 }
