@@ -1,2 +1,4 @@
-IPS API-SDK for Java
+IPS API SDK for Java
 ====================
+
+
