@@ -55,7 +55,7 @@ public class ApiClient {
     /**
      * Sends IPS message
      *
-     * @param receiverCert Receivers X509 certificate
+     * @param receiverCertificate Receivers X509 certificate
      * @param receiver     Receiver identifier (BIC)
      * @param ref          Message reference, used to identify message
      * @param type         Message type
@@ -65,7 +65,7 @@ public class ApiClient {
      * @param ccy          Currency
      * @throws Exception
      */
-    public void send(X509Certificate receiverCert,
+    public void send(X509Certificate receiverCertificate,
                      String receiver,
                      String ref,
                      Short type,
@@ -83,7 +83,7 @@ public class ApiClient {
                                 .withDate(date)
                                 .withAmount(amount)
                                 .withCcy(ccy)
-                                .withContentBytes(CryptoUtils.encryptCms(content.getBytes("UTF8"), receiverCert)))))
+                                .withContentBytes(CryptoUtils.encryptCms(content.getBytes("UTF8"), receiverCertificate)))))
                 .execute();
     }
 
