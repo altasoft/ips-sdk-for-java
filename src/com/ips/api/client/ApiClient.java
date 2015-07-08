@@ -128,7 +128,7 @@ public class ApiClient {
      * @param messageId Message identifier
      * @throws Exception
      */
-    public void completeMessge(int messageId) throws Exception {
+    public void complete(int messageId) throws Exception {
         setMessageState(getInboxMessageUri(messageId), "Completed", null);
     }
 
@@ -139,7 +139,7 @@ public class ApiClient {
      * @param reason    The reason of rejection
      * @throws Exception
      */
-    public void rejectMessage(int messageId, String reason) throws Exception {
+    public void reject(int messageId, String reason) throws Exception {
         setMessageState(getInboxMessageUri(messageId), "Rejected", reason);
     }
 
