@@ -68,7 +68,7 @@ public class ApiClient {
     public void send(X509Certificate receiverCertificate,
                      String receiver,
                      String ref,
-                     Short type,
+                     String type,
                      DateTime date,
                      String content,
                      BigDecimal amount,

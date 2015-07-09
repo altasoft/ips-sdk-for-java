@@ -30,7 +30,7 @@ public final class Message extends GenericJson {
     private String receiver;
 
     @Key
-    private Short type;
+    private String type;
 
     @Key
     private DateTime date;
@@ -91,11 +91,11 @@ public final class Message extends GenericJson {
         this.receiver = receiver;
     }
 
-    public final Short getType() {
+    public final String getType() {
         return type;
     }
 
-    public final void setType(Short type) {
+    public final void setType(String type) {
         this.type = type;
     }
 
@@ -195,7 +195,7 @@ public final class Message extends GenericJson {
         return this;
     }
 
-    public Message withType(Short value) {
+    public Message withType(String value) {
         this.type = value;
         return this;
     }
